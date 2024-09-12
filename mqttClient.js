@@ -49,15 +49,15 @@ client.on('message', async (topic, message) => {
         temperature: parseFloat(rawData.temperature),
         humidity: parseFloat(rawData.humidity),
         lux: parseInt(rawData.lux, 10),
-        soilMoisture: parseFloat(rawData.soilMoisture),
-        ECO2: parseInt(rawData.ECO2, 10),
+        soil_moisture: parseFloat(rawData.soil_moisture), // inconstistent
+        co2: parseInt(rawData.co2, 10), // inconsistent
       };
 
       // Validasi data
       const isValidData = data.timestamp && !Number.isNaN(data.temperature)
         && !Number.isNaN(data.humidity)
-        && !Number.isNaN(data.lux) && !Number.isNaN(data.soilMoisture)
-        && !Number.isNaN(data.ECO2);
+        && !Number.isNaN(data.lux) && !Number.isNaN(data.soil_moisture)
+        && !Number.isNaN(data.co2);
 
       if (!isValidData) {
         console.error('Invalid data format:', data);

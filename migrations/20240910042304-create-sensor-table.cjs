@@ -1,6 +1,6 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('Sensors', {
+    await queryInterface.createTable('Sensor', {
       sensor_id: {
         type: Sequelize.INTEGER, // Menggunakan INTEGER untuk auto-increment
         autoIncrement: true, // Menandakan kolom ini auto-increment
@@ -45,6 +45,6 @@ module.exports = {
   },
 
   down: async (queryInterface) => {
-    await queryInterface.dropTable('Sensors');
+    await queryInterface.dropTable('Sensor');
   },
 };

@@ -116,7 +116,7 @@ const getLatestData = async (req, res) => {
   try {
     const data = await Sensor.findAll({
       attributes: ['timestamp', 'temperature', 'humidity', 'lux', 'co2', 'soil_moisture'],
-      order: [['timestamp', 'DESC']],
+      order: [['sensor_id', 'DESC']],
       limit: 100,
     });
 
