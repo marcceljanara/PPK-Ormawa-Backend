@@ -1,4 +1,5 @@
-/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable consistent-return */
+/* eslint-disable no-shadow */
 /* eslint-disable import/extensions */
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -8,13 +9,13 @@ import Seller from '../models/seller-models.js';
 export const getUsers = async (req, res) => {
   try {
     // Kembalikan data pengguna yang sedang login
-    const user = await Seller.findOne({
-      where: { user_id: req.userId },
-      attributes: ['user_id', 'name', 'email'],
+    const seller = await Seller.findOne({
+      where: { seller_id: req.sellerId },
+      attributes: ['seller_id', 'name', 'email'],
     });
 
-    if (!user) return res.status(404).json({ msg: 'Pengguna tidak ditemukan' });
-    return res.json(user);
+    if (!seller) return res.status(404).json({ msg: 'Pengguna tidak ditemukan' });
+    return res.json(seller);
   } catch (error) {
     console.log(error);
     return res.status(500).json({ msg: 'Terjadi kesalahan pada server' });
@@ -24,7 +25,7 @@ export const getUsers = async (req, res) => {
 // Registrasi pengguna baru
 export const register = async (req, res) => {
   const {
-    name, email, password, confPassword,
+    name, email, password, confPassword, phoneNumber,
   } = req.body;
 
   if (password !== confPassword) {
@@ -35,10 +36,18 @@ export const register = async (req, res) => {
 
   try {
     // Cek apakah email sudah ada dalam basis data
-    const existingUser = await Seller.findOne({ where: { email } });
-    if (existingUser) {
+    const existingSeller = await Seller.findOne({ where: { email } });
+    if (existingSeller) {
       return res.status(400).json({
         msg: 'Email sudah terdaftar. Silakan gunakan email lain.',
+      });
+    }
+
+    // Cek apakah nomor telepon sudah ada dalam basis data
+    const existingPhoneNumber = await Seller.findOne({ where: { phone_number: phoneNumber } });
+    if (existingPhoneNumber) {
+      return res.status(400).json({
+        msg: 'Nomor telepon sudah terdaftar. Silakan gunakan nomor lain.',
       });
     }
 
@@ -49,6 +58,7 @@ export const register = async (req, res) => {
       name,
       email,
       password: hashPassword,
+      phone_number: phoneNumber,
     });
 
     return res.json({
@@ -63,41 +73,40 @@ export const register = async (req, res) => {
 // Login pengguna
 export const login = async (req, res) => {
   try {
-    const user = await Seller.findOne({
+    const seller = await Seller.findOne({
       where: {
         email: req.body.email,
       },
     });
-    if (!user) {
+    if (!seller) {
       return res.status(404).json({
         msg: 'Email tidak ditemukan',
       });
     }
 
-    const match = await bcryptjs.compare(req.body.password, user.password);
+    const match = await bcryptjs.compare(req.body.password, seller.password);
     if (!match) {
       return res.status(400).json({
         msg: 'Password salah',
       });
     }
 
-    const userId = user.user_id;
-    const { name } = user;
-    const { email } = user;
+    const sellerId = seller.seller_id;
+    const { name, email } = seller;
     const accessToken = jwt.sign({
-      userId, name, email,
+      sellerId, name, email,
     }, process.env.ACCESS_TOKEN_SECRET, {
       expiresIn: '2m',
     });
     const refreshToken = jwt.sign({
-      userId, name, email,
+      sellerId, name, email,
     }, process.env.REFRESH_TOKEN_SECRET, {
       expiresIn: '1d',
     });
 
     await Seller.update({ refresh_token: refreshToken }, {
       where: {
-        user_id: userId,
+        seller_id: sellerId,
       },
     });
 
@@ -118,18 +127,18 @@ export const logout = async (req, res) => {
   if (!refreshToken) return res.status(400).json({ msg: 'Refresh token tidak ada' });
 
   try {
-    const user = await Seller.findOne({
+    const seller = await Seller.findOne({
       where: {
         refresh_token: refreshToken,
       },
     });
 
-    if (!user) return res.status(404).json({ msg: 'Pengguna tidak ditemukan' });
+    if (!seller) return res.status(404).json({ msg: 'Pengguna tidak ditemukan' });
 
-    const userId = user.user_id;
+    const sellerId = seller.seller_id;
     await Seller.update({ refresh_token: null }, {
       where: {
-        user_id: userId,
+        seller_id: sellerId,
       },
     });
 
@@ -154,19 +163,19 @@ export const changePassword = async (req, res) => {
   }
 
   try {
-    const user = await Seller.findOne({
+    const seller = await Seller.findOne({
       where: {
-        user_id: req.userId,
+        seller_id: req.sellerId,
       },
     });
 
-    if (!user) {
+    if (!seller) {
       return res.status(404).json({
         msg: 'Pengguna tidak ditemukan',
       });
     }
 
-    const match = await bcryptjs.compare(oldPassword, user.password);
+    const match = await bcryptjs.compare(oldPassword, seller.password);
     if (!match) {
       return res.status(400).json({
         msg: 'Password lama salah',
@@ -178,12 +187,48 @@ export const changePassword = async (req, res) => {
 
     await Seller.update({ password: hashNewPassword }, {
       where: {
-        user_id: req.userId,
+        seller_id: req.sellerId,
       },
     });
 
     return res.json({
       msg: 'Password berhasil diubah',
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ msg: 'Terjadi kesalahan pada server' });
+  }
+};
+
+export const refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.cookies;
+    if (!refreshToken) return res.sendStatus(401);
+
+    // Mencari seller berdasarkan refresh token
+    const seller = await Seller.findOne({
+      where: {
+        refresh_token: refreshToken, // Kolom refresh_token di tabel Seller
+      },
+    });
+
+    if (!seller) return res.sendStatus(403);
+
+    // Verifikasi refresh token
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err) => {
+      if (err) return res.sendStatus(403);
+
+      // Ambil data dari seller untuk membuat access token baru
+      const sellerId = seller.seller_id;
+      const { name, email } = seller;
+
+      const accessToken = jwt.sign({
+        sellerId, name, email,
+      }, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: '40s',
+      });
+
+      return res.json({ accessToken });
     });
   } catch (error) {
     console.log(error);

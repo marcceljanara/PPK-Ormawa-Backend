@@ -81,6 +81,10 @@ module.exports = {
         allowNull: false,
         defaultValue: true, // True for active, false for inactive
       },
+      refresh_token: { // Add refresh_token field here
+        type: Sequelize.TEXT,
+        allowNull: true,
+      },
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
@@ -136,6 +140,14 @@ module.exports = {
       stock: {
         type: Sequelize.INTEGER,
         allowNull: false,
+      },
+      category: { // Kolom kategori
+        type: Sequelize.STRING,
+        allowNull: true, // Jika kategori tidak selalu diperlukan
+      },
+      image_url: { // Kolom URL gambar
+        type: Sequelize.STRING,
+        allowNull: true, // Jika gambar tidak selalu diperlukan
       },
       deletedAt: {
         type: Sequelize.DATE,

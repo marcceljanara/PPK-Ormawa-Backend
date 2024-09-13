@@ -13,6 +13,7 @@ const Seller = db.define('Seller', {
   },
   admin_id: {
     type: DataTypes.STRING,
+    allowNull: true,
     references: {
       model: 'Admin',
       key: 'admin_id',
@@ -41,7 +42,11 @@ const Seller = db.define('Seller', {
   status: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: true,
+    defaultValue: true, // Active by default
+  },
+  refresh_token: { // Add the refresh token field here
+    type: DataTypes.TEXT,
+    allowNull: true,
   },
 }, {
   freezeTableName: true,

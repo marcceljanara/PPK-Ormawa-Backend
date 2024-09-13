@@ -5,11 +5,11 @@ import Product from '../models/product-models.js';
 
 export const createProduct = async (req, res) => {
   const {
-    name, category, brand, description, price, quantity,
+    name, category, description, price, stock, imageUrl,
   } = req.body;
 
   // Array untuk validasi data wajib
-  const requiredFields = [name, category, price, quantity];
+  const requiredFields = [name, category, price, stock];
 
   // Validasi data wajib
   for (const field of requiredFields) {
@@ -25,11 +25,11 @@ export const createProduct = async (req, res) => {
     await Product.create({
       name,
       category,
-      brand,
       description,
       price,
-      quantity,
-      user_id: req.userId,
+      stock,
+      image_url: imageUrl,
+      seller_id: req.sellerId, // Misalnya sellerId adalah sellerId
     });
 
     // Mengirim respon berhasil
@@ -59,14 +59,14 @@ export const getProducts = async (req, res) => {
         [Op.or]: [
           { name: { [Op.iLike]: `%${searchQuery}%` } },
           { category: { [Op.iLike]: `%${searchQuery}%` } },
-          { brand: { [Op.iLike]: `%${searchQuery}%` } },
+          { description: { [Op.iLike]: `%${searchQuery}%` } },
         ],
       };
     }
 
     // Mengambil data produk dengan memperhitungkan limit, offset, dan pencarian
     const products = await Product.findAll({
-      attributes: ['product_id', 'name', 'category', 'brand', 'price'],
+      attributes: ['product_id', 'name', 'category', 'price', 'image_url'],
       limit,
       offset,
       where: whereClause,
@@ -107,7 +107,7 @@ export const getProductsUser = async (req, res) => {
     // Menyiapkan filter berdasarkan role dan pencarian
     let whereClause = {};
     if (req.userRole !== 'admin') {
-      whereClause.user_id = req.userId; // Filter data berdasarkan user_id jika bukan admin
+      whereClause.seller_id = req.sellerId; // Filter data berdasarkan seller_id jika bukan admin
     }
 
     if (searchQuery) {
@@ -116,14 +116,14 @@ export const getProductsUser = async (req, res) => {
         [Op.or]: [
           { name: { [Op.iLike]: `%${searchQuery}%` } },
           { category: { [Op.iLike]: `%${searchQuery}%` } },
-          { brand: { [Op.iLike]: `%${searchQuery}%` } },
+          { description: { [Op.iLike]: `%${searchQuery}%` } },
         ],
       };
     }
 
     // Mengambil data produk dengan memperhitungkan limit, offset, dan pencarian
     const products = await Product.findAll({
-      attributes: ['product_id', 'name', 'category', 'brand', 'price'],
+      attributes: ['product_id', 'name', 'category', 'price', 'stock', 'image_url'],
       limit,
       offset,
       where: whereClause,
@@ -181,7 +181,7 @@ export const getDetailProductById = async (req, res) => {
 export const updateProduct = async (req, res) => {
   const { id } = req.params; // Mendapatkan id dari parameter URL
   const {
-    name, category, brand, description, price, quantity,
+    name, category, description, price, stock, imageUrl,
   } = req.body;
 
   try {
@@ -195,7 +195,7 @@ export const updateProduct = async (req, res) => {
     }
 
     // Memeriksa apakah pengguna memiliki izin untuk memperbarui produk (jika bukan admin)
-    if (req.userRole !== 'admin' && product.user_id !== req.userId) {
+    if (req.userRole !== 'admin' && product.seller_id !== req.sellerId) {
       return res.status(403).json({
         msg: 'Anda tidak memiliki izin untuk memperbarui produk ini',
       });
@@ -205,10 +205,10 @@ export const updateProduct = async (req, res) => {
     await Product.update({
       name,
       category,
-      brand,
       description,
       price,
-      quantity,
+      stock,
+      image_url: imageUrl,
     }, {
       where: {
         product_id: id,

@@ -11,7 +11,7 @@ import {
   getProducts, getProductsUser, updateProduct,
 } from '../controllers/productController.js';
 import {
-  changePassword, getUsers, login, logout, register,
+  changePassword, getUsers, login, logout, refreshToken, register,
 } from '../controllers/sellerController.js';
 
 const router = express.Router();
@@ -26,7 +26,7 @@ router.get('/data/latest', getLatestData);
 router.get('/users', verifyToken, getUsers);
 router.post('/users', register);
 router.post('/login', login);
-// router.get('/token', refreshToken);
+router.get('/token', refreshToken);
 router.delete('/logout', logout);
 router.put('/password', verifyToken, changePassword);
 

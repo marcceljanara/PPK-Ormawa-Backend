@@ -13,8 +13,9 @@ const authorizeProductAccess = async (req, res, next) => {
     if (!token) return res.status(401).json({ msg: 'Token tidak ditemukan' });
 
     // Verifikasi token
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN);
-    req.userId = decoded.userId; // Misalnya ID pengguna bisa berupa sellerId atau adminId
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    req.sellerId = decoded.sellerId || null; // Dapatkan sellerId dari token
+    req.adminId = decoded.adminId || null; // Dapatkan adminId dari token
 
     // Ambil ID produk dari parameter URL
     const productId = req.params.id;
@@ -26,28 +27,26 @@ const authorizeProductAccess = async (req, res, next) => {
     // Jika produk tidak ditemukan, kembalikan status 404
     if (!product) return res.status(404).json({ msg: 'Produk tidak ditemukan' });
 
-    // Periksa apakah pengguna adalah seller atau admin
-    const seller = await Seller.findByPk(req.userId);
-    const admin = await Admin.findByPk(req.userId);
-
-    // Jika seller tidak ditemukan tetapi admin ditemukan, beri akses
-    if (seller) {
-      if (product.seller_id !== req.userId) {
+    // Jika pengguna adalah seller, periksa apakah mereka pemilik produk
+    if (req.sellerId) {
+      const seller = await Seller.findByPk(req.sellerId);
+      if (!seller || product.seller_id !== req.sellerId) {
         return res.status(403).json({ msg: 'Anda tidak memiliki izin untuk mengakses produk ini' });
       }
-    } else if (admin) {
-      // Admin memiliki akses ke semua produk
-      return next();
-    } else {
-      // Jika tidak ada seller atau admin yang ditemukan, kembalikan status 404
-      return res.status(404).json({ msg: 'Pengguna tidak ditemukan' });
+    } else if (req.adminId) { // perbaikan posisi brace
+      const admin = await Admin.findByPk(req.adminId);
+      if (!admin) {
+        return res.status(403).json({ msg: 'Anda tidak memiliki izin untuk mengakses produk ini' });
+      }
+    } else { // perbaikan posisi brace
+      return res.status(403).json({ msg: 'Anda tidak memiliki izin untuk mengakses produk ini' });
     }
 
     // Jika validasi berhasil, lanjutkan ke middleware berikutnya
     return next();
   } catch (error) {
     console.error(error);
-    return res.status(403).json({ msg: 'Token tidak valid' });
+    return res.status(403).json({ msg: 'Token tidak valid atau terjadi kesalahan saat memverifikasi' });
   }
 };
 

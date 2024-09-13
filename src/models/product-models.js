@@ -45,6 +45,14 @@ const Product = db.define('Product', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  category: { // Kolom kategori
+    type: DataTypes.STRING,
+    allowNull: true, // Jika kategori tidak selalu diperlukan
+  },
+  image_url: { // Kolom URL gambar
+    type: DataTypes.STRING,
+    allowNull: true, // Jika gambar tidak selalu diperlukan
+  },
   deletedAt: {
     type: DataTypes.DATE,
     allowNull: true,
