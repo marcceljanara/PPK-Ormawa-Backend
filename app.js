@@ -5,7 +5,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import db from './src/configs/database.js';
 import router from './src/routes/router.js';
-import './mqttClient.js';
+// import './mqttClient.js';
 
 dotenv.config();
 

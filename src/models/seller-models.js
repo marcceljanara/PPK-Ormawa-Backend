@@ -44,9 +44,23 @@ const Seller = db.define('Seller', {
     allowNull: false,
     defaultValue: true, // Active by default
   },
-  refresh_token: { // Add the refresh token field here
+  refresh_token: {
     type: DataTypes.TEXT,
     allowNull: true,
+  },
+  // Kolom verifikasi
+  is_verified: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false, // Seller belum terverifikasi secara default
+  },
+  otp_code: {
+    type: DataTypes.INTEGER(6),
+    allowNull: true, // Kode OTP hanya ada setelah registrasi
+  },
+  otp_expiration: {
+    type: DataTypes.DATE,
+    allowNull: true, // Batas waktu validasi OTP
   },
 }, {
   freezeTableName: true,

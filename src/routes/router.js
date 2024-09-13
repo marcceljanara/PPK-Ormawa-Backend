@@ -12,7 +12,9 @@ import {
 } from '../controllers/productController.js';
 import {
   changePassword, getUsers, login, logout, refreshToken, register,
+  verifyOtp,
 } from '../controllers/sellerController.js';
+import verifySellerMiddleware from '../middleware/isVerified.js';
 
 const router = express.Router();
 
@@ -23,18 +25,19 @@ router.get('/data/download/:timeframe', downloadDataAsCSV);
 router.get('/data/latest', getLatestData);
 
 // SELLER
-router.get('/users', verifyToken, getUsers);
+router.get('/users', verifyToken, verifySellerMiddleware, getUsers);
 router.post('/users', register);
 router.post('/login', login);
+router.post('/verify', verifyOtp);
 router.get('/token', refreshToken);
 router.delete('/logout', logout);
-router.put('/password', verifyToken, changePassword);
+router.put('/password', verifyToken, verifySellerMiddleware, changePassword);
 
 // CRUD PRODUCT
-router.post('/products', verifyToken, createProduct);
-router.get('/productsseller', verifyToken, getProductsUser);
-router.put('/products/:id', verifyToken, authorizeProductAccess, updateProduct);
-router.delete('/products/:id', verifyToken, authorizeProductAccess, deleteProductById);
+router.post('/products', verifyToken, verifySellerMiddleware, createProduct);
+router.get('/productsseller', verifyToken, verifySellerMiddleware, getProductsUser);
+router.put('/products/:id', verifyToken, authorizeProductAccess, verifySellerMiddleware, updateProduct);
+router.delete('/products/:id', verifyToken, authorizeProductAccess, verifySellerMiddleware, deleteProductById);
 
 // CRUD GUEST
 router.get('/products', getProducts);

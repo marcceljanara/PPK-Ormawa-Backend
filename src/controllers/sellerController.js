@@ -1,9 +1,12 @@
+/* eslint-disable import/no-extraneous-dependencies */
 /* eslint-disable consistent-return */
 /* eslint-disable no-shadow */
 /* eslint-disable import/extensions */
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import moment from 'moment';
 import Seller from '../models/seller-models.js';
+import sendEmail from '../utils/sendEmail.js';
 
 // Mendapatkan data pengguna
 export const getUsers = async (req, res) => {
@@ -21,6 +24,9 @@ export const getUsers = async (req, res) => {
     return res.status(500).json({ msg: 'Terjadi kesalahan pada server' });
   }
 };
+
+// Fungsi untuk menghasilkan OTP berupa 6 digit angka
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000);
 
 // Registrasi pengguna baru
 export const register = async (req, res) => {
@@ -51,21 +57,76 @@ export const register = async (req, res) => {
       });
     }
 
+    // Hash password
     const salt = await bcryptjs.genSalt();
     const hashPassword = await bcryptjs.hash(password, salt);
 
-    await Seller.create({
+    // Generate OTP
+    const otpCode = generateOTP(); // Menghasilkan OTP berupa 6 digit angka
+    const otpExpiration = moment().add(30, 'minutes').toDate(); // Kode OTP kedaluwarsa dalam 5 menit
+
+    // Membuat seller baru dengan OTP
+    const newSeller = await Seller.create({
       name,
       email,
       password: hashPassword,
       phone_number: phoneNumber,
+      otp_code: otpCode,
+      otp_expiration: otpExpiration,
+      is_verified: false, // Belum terverifikasi
     });
 
-    return res.json({
-      msg: 'Registrasi Berhasil',
+    // Kirim email dengan kode OTP
+    await sendEmail({
+      to: newSeller.email,
+      subject: 'Kode Verifikasi Akun Anda',
+      text: `Kode OTP verifikasi akun Anda adalah: ${otpCode}. Kode ini berlaku selama 5 menit.`,
+    });
+
+    return res.status(201).json({
+      msg: 'Registrasi berhasil. Silakan cek email Anda untuk kode OTP.',
     });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({ msg: 'Terjadi kesalahan pada server' });
+  }
+};
+
+// Fungsi untuk memverifikasi OTP
+export const verifyOtp = async (req, res) => {
+  const { email, otp } = req.body;
+
+  try {
+    // Cari seller berdasarkan email
+    const seller = await Seller.findOne({ where: { email } });
+
+    // Jika seller tidak ditemukan
+    if (!seller) {
+      return res.status(404).json({ msg: 'Seller tidak ditemukan' });
+    }
+
+    // Cek apakah seller sudah terverifikasi
+    if (seller.is_verified) {
+      return res.status(400).json({ msg: 'Seller sudah terverifikasi' });
+    }
+
+    // Cek apakah OTP cocok dan belum kadaluarsa
+    const currentTime = new Date();
+    console.log(typeof seller.otp_code);
+    console.log(typeof otp);
+    if (seller.otp_code !== otp || seller.otp_expiration < currentTime) {
+      return res.status(400).json({ msg: 'Kode OTP tidak valid atau sudah kadaluarsa' });
+    }
+
+    // Jika OTP valid, set seller sebagai terverifikasi
+    seller.is_verified = true;
+    seller.otp_code = null; // Hapus OTP setelah verifikasi berhasil
+    seller.otp_expiration = null;
+    await seller.save();
+
+    return res.json({ msg: 'Verifikasi berhasil, seller telah terverifikasi' });
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ msg: 'Terjadi kesalahan pada server' });
   }
 };
@@ -96,7 +157,7 @@ export const login = async (req, res) => {
     const accessToken = jwt.sign({
       sellerId, name, email,
     }, process.env.ACCESS_TOKEN_SECRET, {
-      expiresIn: '2m',
+      expiresIn: '5m',
     });
     const refreshToken = jwt.sign({
       sellerId, name, email,

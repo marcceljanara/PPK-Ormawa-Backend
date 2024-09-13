@@ -95,6 +95,20 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.fn('now'),
       },
+      // Kolom verifikasi
+      is_verified: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false, // Seller belum terverifikasi secara default
+      },
+      otp_code: {
+        type: Sequelize.INTEGER(6),
+        allowNull: true, // Kode OTP hanya ada setelah registrasi
+      },
+      otp_expiration: {
+        type: Sequelize.DATE,
+        allowNull: true, // Batas waktu validasi OTP
+      },
     });
 
     // Create Product Table
